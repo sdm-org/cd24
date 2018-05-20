@@ -1,0 +1,50 @@
+jobs:
+- name: package
+  plan:
+  - get: source-code
+    trigger: false
+    on_success:
+      put: atomist-build-notify
+      params:
+        status: started
+  - task: package
+    privileged: true
+    file: source-code/ci/tasks/package.yml
+    params:
+      ATOMIST_REPO_USER: ((ARTIFACTORY_USER)) 
+      ATOMIST_REPO_TOKEN: ((ARTIFACTORY_TOKEN))
+      REPO_URL: ((ARTIFACTORY_URL))
+    on_failure:
+      put: atomist-build-notify
+      params:
+        status: failed
+    on_success:
+      put: atomist-build-notify
+      params:
+        status: passed
+
+resources:
+- name: source-code
+  type: git
+  source:
+    uri: https://github.com/sdm-org/cd24.git
+    branch: master
+    username: ((GIT_USER)) 
+    password: ((GIT_PASSWORD))
+- name: atomist-build-notify
+  type: atomist
+  source:
+    org: sdm-org
+    repo: cd24
+    teamId: T8G7LHAUD
+
+resource_types:
+- name: atomist
+  type: docker-image
+  source:
+    repository: atomist/atomist-resource
+    tag: latest
+- name: artifactory
+  type: docker-image
+  source:
+    repository: pivotalservices/artifactory-resource
